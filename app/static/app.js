@@ -39,7 +39,7 @@ async function showIssue(id) {
   try {
     const issue = await request(`/issues/${id}`);
     if (version === detailVersion) renderDetail(byId('detail'), issue, users, openEditor, deleteIssue);
-  } catch (error) { report(error); }
+  } catch (error) { if (version === detailVersion) report(error); }
 }
 
 function openEditor(issue = null) {
@@ -61,6 +61,7 @@ async function deleteIssue(issue) {
     byId('detail').replaceChildren(element('h2', 'Issue deleted'));
     offset = 0;
     await loadIssues();
+    byId('new').focus();
   } catch (error) { report(error); }
 }
 
@@ -81,6 +82,7 @@ form.addEventListener('submit', async event => {
     offset = 0;
     await loadIssues();
     await showIssue(issue.id);
+    byId('detail').focus();
   } catch (error) { byId('form-error').textContent = error.message; }
   finally {
     saving = false;

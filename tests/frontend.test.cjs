@@ -11,7 +11,7 @@ class Control {
   append() {}
   replaceChildren() {}
   reset() {}
-  focus() {}
+  focus() { this.focused = true; }
   showModal() { this.open = true; }
   close() { this.open = false; }
   dispatch(name) {
@@ -23,7 +23,8 @@ class Control {
   }
 }
 
-async function controller() {
+async function controller(overrideRequest) {
+  let selectIssue, removeIssue;
   const controls = new Map();
   const get = id => {
     if (!controls.has(id)) controls.set(id, new Control());
@@ -37,8 +38,13 @@ async function controller() {
   const context = {
     document: { getElementById: get }, URLSearchParams, setTimeout, clearTimeout,
     FormData: class { *[Symbol.iterator]() { yield* Object.entries(issue).filter(([key]) => key !== 'id'); } },
-    element: () => new Control(), renderList() {}, renderDetail() {}, confirm: () => true,
+    element: () => new Control(),
+    renderList(container, issues, select) { selectIssue = select; },
+    renderDetail(container, issue, users, edit, remove) { removeIssue = remove; },
+    confirm: () => true,
     request: async (url, options = {}) => {
+      const overridden = overrideRequest?.(url, options);
+      if (overridden !== undefined) return overridden;
       if (url === '/users') return [{ id: 1, name: 'Demo' }];
       if (options.method === 'POST') return saved;
       if (url.startsWith('/issues?')) return [];
@@ -48,7 +54,7 @@ async function controller() {
   const source = fs.readFileSync(path.join(__dirname, '../app/static/app.js'), 'utf8').replace(/^import .*;\n/gm, '');
   vm.runInNewContext(source, context);
   await new Promise(setImmediate); // Complete startup's resolved promises.
-  return { get, issue, resolveSave, rejectSave };
+  return { get, issue, resolveSave, rejectSave, selectIssue: id => selectIssue(id), deleteIssue: issue => removeIssue(issue) };
 }
 
 test('Escape cannot dismiss an issue editor while its save is in flight', async () => {
@@ -63,6 +69,7 @@ test('Escape cannot dismiss an issue editor while its save is in flight', async 
     await pending;
   }
   assert.equal(app.get('editor').open, false);
+  assert.equal(app.get('detail').focused, true, 'saved issue receives keyboard focus');
   assert.equal(app.get('save').disabled, false);
 });
 
@@ -100,4 +107,24 @@ test('Validation errors identify the invalid field', async () => {
 test('A successful deletion does not try to parse an empty body', async () => {
   const call = apiWith(async () => ({ ok: true, status: 204, json: async () => { throw new Error('No JSON'); } }));
   assert.equal(await call('/issues/1', { method: 'DELETE' }), null);
+});
+
+
+test('An obsolete detail failure cannot replace the current status message', async () => {
+  let rejectOld;
+  const oldRequest = new Promise((resolve, reject) => { rejectOld = reject; });
+  const app = await controller(url => url === '/issues/1' ? oldRequest : undefined);
+  const old = app.selectIssue(1);
+  await app.selectIssue(2);
+  app.get('message').textContent = 'Current status';
+  rejectOld(new Error('Old failure'));
+  await old;
+  assert.equal(app.get('message').textContent, 'Current status');
+});
+
+test('Deleting an issue restores focus to the new-issue button', async () => {
+  const app = await controller();
+  await app.selectIssue(1);
+  await app.deleteIssue(app.issue);
+  assert.equal(app.get('new').focused, true);
 });
