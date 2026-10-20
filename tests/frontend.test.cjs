@@ -79,3 +79,25 @@ test('A failed save keeps the draft open and restores cancellation', async () =>
   app.get('editor').dispatch('cancel');
   assert.equal(app.get('editor').open, false);
 });
+
+function apiWith(fetch) {
+  const source = fs.readFileSync(path.join(__dirname, '../app/static/api.js'), 'utf8').replace('export async function', 'async function');
+  const context = { fetch };
+  vm.runInNewContext(source + '\nthis.callApi = request;', context);
+  return context.callApi;
+}
+
+test('Network failures give a useful retry message', async () => {
+  const call = apiWith(async () => { throw new TypeError('Failed to fetch'); });
+  await assert.rejects(call('/issues'), { message: 'Unable to reach the server. Please try again.' });
+});
+
+test('Validation errors identify the invalid field', async () => {
+  const call = apiWith(async () => ({ ok: false, status: 422, json: async () => ({ detail: [{ loc: ['body', 'title'], msg: 'String too short' }] }) }));
+  await assert.rejects(call('/issues'), { message: 'title: String too short' });
+});
+
+test('A successful deletion does not try to parse an empty body', async () => {
+  const call = apiWith(async () => ({ ok: true, status: 204, json: async () => { throw new Error('No JSON'); } }));
+  assert.equal(await call('/issues/1', { method: 'DELETE' }), null);
+});

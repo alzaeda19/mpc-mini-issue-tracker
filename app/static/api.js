@@ -1,9 +1,14 @@
 // One place to translate HTTP failures into readable messages.
 export async function request(path, options = {}) {
-  const response = await fetch(`/api${path}`, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-  });
+  let response;
+  try {
+    response = await fetch(`/api${path}`, {
+      ...options,
+      headers: { 'Content-Type': 'application/json', ...options.headers },
+    });
+  } catch {
+    throw new Error('Unable to reach the server. Please try again.');
+  }
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     const detail = body.detail;
