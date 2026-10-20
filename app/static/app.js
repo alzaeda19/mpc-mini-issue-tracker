@@ -6,6 +6,7 @@ const form = byId('form');
 const editor = byId('editor');
 let users = [];
 let editingId = null;
+let saving = false;
 let offset = 0;
 let listVersion = 0;
 let detailVersion = 0;
@@ -42,6 +43,7 @@ async function showIssue(id) {
 }
 
 function openEditor(issue = null) {
+  if (saving) return;
   editingId = issue?.id ?? null;
   form.reset();
   byId('form-title').textContent = issue ? `Edit issue #${issue.id}` : 'New issue';
@@ -64,6 +66,9 @@ async function deleteIssue(issue) {
 
 form.addEventListener('submit', async event => {
   event.preventDefault();
+  if (saving) return;
+  saving = true;
+  byId('new').disabled = true;
   const values = Object.fromEntries(new FormData(form));
   values.assignee_id = Number(values.assignee_id);
   byId('save').disabled = true;
@@ -77,9 +82,16 @@ form.addEventListener('submit', async event => {
     await loadIssues();
     await showIssue(issue.id);
   } catch (error) { byId('form-error').textContent = error.message; }
-  finally { byId('save').disabled = false; byId('cancel').disabled = false; }
+  finally {
+    saving = false;
+    byId('new').disabled = false;
+    byId('save').disabled = false;
+    byId('cancel').disabled = false;
+  }
 });
 
+// Escape must not close and reopen the editor while a save owns its state.
+editor.addEventListener('cancel', event => { if (saving) event.preventDefault(); });
 byId('new').disabled = true;
 byId('new').addEventListener('click', () => openEditor());
 byId('cancel').addEventListener('click', () => editor.close());
