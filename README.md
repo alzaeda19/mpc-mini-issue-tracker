@@ -6,13 +6,14 @@ JavaScript frontend and REST API. SQLite persists data across restarts.
 
 ## Setup and run (macOS)
 
-Requires Python 3.12+ and a modern browser. No Node, database service, or API keys.
+Requires Python 3.12+ and a modern browser. No Node, database service, or API keys are needed to run the app.
+Node 20+ is optional for the frontend controller tests.
 From the repository root:
 
 ```sh
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
+python -m pip install -r requirements.lock.txt
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
@@ -34,6 +35,9 @@ Run from the repository root. The database and virtual environment are ignored b
 Git. Back up the database before deleting it; removing it resets stored issues.
 Bind to localhost: there is no authentication and this is not a public deployment.
 
+The lock file pins the complete tested dependency set; `requirements.txt` lists
+direct dependencies. Commands also work on Linux.
+
 ## Tests
 
 ```sh
@@ -46,6 +50,15 @@ created/updated dates, invalid requests and assignees, missing issues, search pl
 status filtering, pagination, restart persistence, frontend delivery and safe
 storage/unexpected errors. Deliberate failure tests assert that internal details
 are not returned to clients. They may produce expected server error logs.
+
+Optional frontend regression checks (Node 20+, no npm install):
+
+```sh
+node --test tests/frontend.test.cjs
+```
+
+These use a small DOM stand-in to test pending saves, draft retention, focus, stale
+errors and API error messages. They are not a browser automation suite.
 
 Manual browser check: create an issue, open details, edit its status/assignee,
 search its description, combine a status filter, reload, and delete a disposable
@@ -79,9 +92,12 @@ safe 500 response. Server logs retain diagnostic details.
 - Statuses: Open, In Progress, Resolved, Closed. All transitions allowed.
 - Priorities: Low, Medium, High, Critical.
 - Title and description are required, whitespace-trimmed, capped at 200 and 10,000
-  characters. Explicit nulls and unknown fields are rejected.
+  characters. NUL and invisible-only text, explicit nulls, and unknown fields are
+  rejected. IDs/offsets fit SQLite signed 64-bit integers.
 - Search is literal substring matching across title and description. SQLite lower()
   case folding primarily covers ASCII; full multilingual search is future work.
+- Pydantic accepts numeric path forms such as `1.0` as ID 1; body assignee IDs
+  require strict integers. An empty `status=` is invalid; omit it for all statuses.
 - Dates are UTC ISO strings; the browser displays local time. Update changes
   updated_at, including a request that sets an existing value again.
 - Lists use offset pagination, 20 rows per UI page. A full last page may expose an
@@ -90,11 +106,13 @@ safe 500 response. Server logs retain diagnostic details.
   migrations, deployment, or automated browser regression suite. Last write wins.
 - SQLite is appropriate for this local exercise; concurrent writes serialize.
 - A failed users load requires a page reload to retry initial setup.
+- There is no Host allowlist or request-body byte cap; localhost binding is the
+  intended use, not an internet-facing service. `/docs` loads Swagger UI from a CDN.
 
-## Review and authorship
+## AI assistance
 
-This implementation was produced with AI assistance. The brief permits AI, but
-Alzayed must review and understand every line before submitting. See
-[WALKTHROUGH.md](WALKTHROUGH.md) for the request flow and review exercises, and
-[ENGINEERING.md](ENGINEERING.md) for decisions. Nothing has been published or
-submitted by this project setup.
+AI assistance was used for implementation, tests, documentation, and five separate
+Claude Fable 5.1 review chats. This is disclosed because the brief permits AI and
+holds the candidate responsible for explaining all submitted code. See
+[WALKTHROUGH.md](WALKTHROUGH.md) for the code paths and review exercises, and
+[ENGINEERING.md](ENGINEERING.md) for design decisions and limitations.

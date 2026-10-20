@@ -94,6 +94,13 @@ class IssueApiTests(unittest.TestCase):
                     self.assertEqual(self.client.patch(url, json={field: value}).status_code, 422)
                     self.assertEqual(self.client.get(url).json(), issue)
 
+    def test_visible_unicode_and_multiline_text_round_trip(self):
+        title = '👩‍💻 Login'
+        description = 'First line\nDeuxième ligne: été'
+        issue = self.create(title=title, description=description)
+        self.assertEqual(issue['title'], title)
+        self.assertEqual(issue['description'], description)
+
     def test_out_of_range_sqlite_integers_are_validation_errors(self):
         huge = 2**63
         for method in ['get', 'delete']:

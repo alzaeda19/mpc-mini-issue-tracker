@@ -1,8 +1,7 @@
-# Candidate review walkthrough
+# Implementation walkthrough
 
-This is AI-assisted code. Read each file and run the application before submitting.
-The following explains the path through the code; it does not establish that you
-already understand or personally authored it.
+This AI-assisted implementation separates HTTP, validation, storage and UI state.
+The following traces the code paths and provides hands-on review exercises.
 
 1. Start at `app/main.py`. `create_app` accepts a database path so tests can create
    isolated applications. Lifespan initializes schema before requests. Route
@@ -25,7 +24,9 @@ already understand or personally authored it.
    convert the select's string user ID to a number, call request, reload list and
    fetch details. `api.js` converts HTTP failures to readable errors; network
    failures are caught by callers. `views.js` assigns user strings with textContent
-   to avoid executing injected HTML. No framework silently manages state.
+   to avoid executing injected HTML. No framework silently manages state. A saving
+   flag prevents Escape from dismissing a pending save; focus moves to saved details
+   or the New issue button after deletion.
 6. Explain request counters: older responses must not replace newer search/detail
    selections. A database transaction does not solve browser response ordering.
 7. Read each test, especially why failed patches leave the original record intact
@@ -38,10 +39,15 @@ Review exercises:
 - Stop and restart the server and find your issue again.
 - Explain why SQLite is fine locally but write concurrency matters at scale.
 - Explain the limitations of last-write-wins, offset pagination and ASCII search.
-- Choose one small change yourself, predict the affected files, implement it, and
-  add a meaningful test. Keep its commit separate from the AI-generated baseline.
+- For further practice, choose a small change, predict its affected files, and add
+  a meaningful test before implementing it.
 
-Before submission, make sure you can explain every function and dependency, revise
-ENGINEERING.md into your own accurate account, and confirm current submission
-instructions. Creating/pushing a GitHub repository and submitting require separate
-authorization and have not been performed.
+Validation nuance: the assignee/existence SELECTs run before SQLite starts its
+implicit write transaction. Invalid requests are normally stopped by Pydantic or
+the pre-check; database constraints and rollback protect subsequent writes. The
+pre-checks themselves do not provide concurrency isolation.
+
+The API integration tests use real temporary SQLite files. The optional Node tests
+use DOM stand-ins and deferred promises; browser checks remain a separate manual
+verification step. AI review and passing tests support assessment of the code, but
+do not substitute for understanding it.

@@ -1,7 +1,6 @@
 # Implementation plan
 
-Brief read in full on October 20, 2026:
-[private exercise brief]
+MPC Mini Issue Tracker brief verified in full on October 20, 2026.
 
 1. Persistent SQLite schema; validated issue models; REST CRUD and search/status filters.
 2. Same-origin simple frontend: list, detail, create, edit, assign, change status, delete.
@@ -9,6 +8,6 @@ Brief read in full on October 20, 2026:
 4. README setup/environment/assumptions/limitations and ENGINEERING.md decisions.
 5. Local verification and explanation walkthrough; candidate review before any submission.
 
-Scope: FastAPI + Python standard-library SQLite + HTML/CSS/JavaScript. No separate frontend build. Three seeded demo users; no authentication or user administration. Search title/description case-insensitively. Dates are UTC. All status transitions allowed. Git commits stay local until expressly authorized otherwise.
+Scope: FastAPI + Python standard-library SQLite + HTML/CSS/JavaScript. No separate frontend build. Three seeded demo users; no authentication or user administration. Search title/description case-insensitively. Dates are UTC. All status transitions allowed. Git history records incremental implementation, tests, review fixes and documentation.
 
-AI assistance is allowed by the brief. This implementation is AI-assisted and requires Alzayed's review and understanding before submission.
+AI assistance is allowed by the brief. The implementation is AI-assisted; responsibility for explaining the submitted code remains with the candidate.

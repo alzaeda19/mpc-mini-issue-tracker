@@ -29,19 +29,21 @@ persistence rather than just mocking repository return values.
 The main design challenge in this implementation was partial updates: omitted
 fields must retain their values, explicit nulls must be rejected, assignees must
 exist, and invalid changes must leave the stored issue untouched. A dedicated
-patch model, exclude_unset, assignee lookup and a database transaction make those
-rules explicit. On the frontend, request version counters discard stale list and
-detail results when requests finish out of order.
-
-This is a description of the AI-assisted implementation; Alzayed should revise
-this section to reflect the difficulty he actually experienced during review.
+patch model and exclude_unset distinguish omitted fields from explicit nulls.
+Pydantic rejects malformed input before SQL; the assignee lookup rejects missing
+users before the write. SQLite constraints and rollback protect the write itself.
+The preliminary reads occur before SQLite implicitly starts its write transaction,
+so they are not isolated from other writers. Users are immutable through this API;
+last-write-wins for issue edits is an explicit limitation. On the frontend, request
+version counters discard stale list and detail results arriving out of order.
 
 ## Another two days
 
-Add automated browser tests for create/edit/filter/delete and failure recovery;
+Add automated browser tests for create/edit/filter/delete and failure recovery
+(the current Node tests use a DOM stand-in);
 review accessibility and responsive layouts; add optimistic concurrency with a
-version field and 409 conflicts; introduce schema migrations and a lock file for
-all transitive dependencies; improve retry/loading states and pagination totals.
+version field and 409 conflicts; introduce schema migrations and dependency update
+automation; improve retry/loading states and pagination totals.
 Discuss authentication, authorization and team/user administration requirements
 before implementing them. Add structured logs and operational health checks.
 
