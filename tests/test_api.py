@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 from app.main import create_app
+from app.database import connect
 
 
 class IssueApiTests(unittest.TestCase):
@@ -47,7 +48,8 @@ class IssueApiTests(unittest.TestCase):
     def test_search_status_and_pagination(self):
         first = self.create()
         second = self.create(title='UI polish', description='Improve contrast', status='Closed')
-        self.assertEqual(len(self.client.get('/api/issues').json()), 2)
+        self.assertEqual(self.client.get('/api/issues').json(), [second, first])
+        self.assertEqual(self.client.get('/api/issues?status=Closed').json(), [second])
         self.assertEqual(self.client.get('/api/issues?status=Open&search=MOBILE').json(), [first])
         self.assertEqual(self.client.get('/api/issues?status=Closed&search=login').json(), [])
         self.assertEqual(self.client.get('/api/issues?search=polish').json(), [second])
@@ -119,6 +121,39 @@ class IssueApiTests(unittest.TestCase):
             response = self.client.get('/api/issues/1')
             self.assertEqual(response.status_code, 500)
             self.assertNotIn('private stack', response.text)
+
+    def test_single_field_patch_and_created_location(self):
+        response = self.client.post('/api/issues', json=self.payload)
+        self.assertEqual(response.status_code, 201)
+        issue = response.json()
+        self.assertEqual(response.headers['location'], f'/api/issues/{issue["id"]}')
+        updated = self.client.patch(response.headers['location'], json={'priority': 'Low'}).json()
+        for field in ['id', 'title', 'description', 'status', 'assignee_id', 'created_at']:
+            self.assertEqual(updated[field], issue[field])
+        self.assertEqual(updated['priority'], 'Low')
+
+    def test_malformed_create_bodies_do_not_create_issues(self):
+        for body in ['{', '[]', 'null', '"text"']:
+            with self.subTest(body=body):
+                self.assertEqual(self.client.post('/api/issues', content=body, headers={'Content-Type': 'application/json'}).status_code, 422)
+        self.assertEqual(self.client.post('/api/issues', content='title=test', headers={'Content-Type': 'text/plain'}).status_code, 422)
+        self.assertEqual(self.client.get('/api/issues').json(), [])
+
+    def test_database_constraints_rollback_invalid_writes(self):
+        issue = self.create()
+        for statement in ['UPDATE issues SET assignee_id=999 WHERE id=?', "UPDATE issues SET status='Invalid' WHERE id=?"]:
+            with self.subTest(statement=statement):
+                with self.assertRaises(sqlite3.IntegrityError), connect(self.path) as db:
+                    db.execute(statement, (issue['id'],))
+                self.assertEqual(self.client.get(f'/api/issues/{issue["id"]}').json(), issue)
+        with self.assertRaises(sqlite3.IntegrityError), connect(self.path) as db:
+            db.execute('DELETE FROM users WHERE id=1')
+
+    def test_restart_does_not_overwrite_existing_users(self):
+        with connect(self.path) as db:
+            db.execute("UPDATE users SET name='Renamed demo user' WHERE id=1")
+        with TestClient(create_app(self.path)) as restarted:
+            self.assertEqual(restarted.get('/api/users').json()[0]['name'], 'Renamed demo user')
 
     def test_frontend_and_docs_are_served(self):
         self.assertEqual(self.client.get('/').status_code, 200)
