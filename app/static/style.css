@@ -1,0 +1,34 @@
+:root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #172c36; background: #f3f6f5; line-height: 1.5; }
+* { box-sizing: border-box; }
+body { max-width: 1200px; margin: auto; padding: 36px 24px; }
+header, .toolbar, .actions, nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+h1 { margin: 4px 0; font-size: 2rem; letter-spacing: -.04em; }
+h2 { font-size: 1.3rem; overflow-wrap: anywhere; }
+.eyebrow { font-size: .75rem; letter-spacing: .15em; color: #256d5a; font-weight: 700; }
+header p { margin: 6px 0; }
+button, input, select, textarea { font: inherit; border: 1px solid #bdceca; border-radius: 7px; padding: 10px 13px; }
+button { background: #fff; cursor: pointer; color: #173e33; }
+button:hover { border-color: #26725c; background: #e9f4ef; }
+button:disabled { opacity: .5; cursor: default; }
+#new, #save { background: #1e624f; color: white; }
+label { display: grid; gap: 5px; font-size: .9rem; font-weight: 600; }
+input, select, textarea { width: 100%; background: #fff; color: inherit; }
+textarea { resize: vertical; }
+.toolbar { padding: 20px 0; align-items: end; }
+.toolbar label:first-child { flex: 1; }
+.workspace { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.workspace > section { padding: 22px; background: #fff; border: 1px solid #dbe4e1; border-radius: 12px; min-width: 0; }
+.issue { width: 100%; text-align: left; margin-bottom: 10px; display: grid; gap: 6px; overflow-wrap: anywhere; }
+small { color: #526d64; }
+nav { margin-top: 20px; font-size: .85rem; }
+.description { white-space: pre-wrap; overflow-wrap: anywhere; }
+dt { font-size: .8rem; color: #567166; margin-top: 12px; }
+dd { margin: 0; }
+.actions { justify-content: flex-end; flex-wrap: wrap; margin-top: 22px; }
+.danger, #form-error { color: #a12626; }
+#message { min-height: 24px; }
+dialog { border: 1px solid #b7cbc2; border-radius: 12px; padding: 28px; width: min(550px, 94vw); max-height: 92vh; }
+dialog::backdrop { background: #10261c88; }
+form { display: grid; gap: 14px; }
+:focus-visible { outline: 3px solid #548ce2; outline-offset: 3px; }
+@media (max-width: 700px) { body { padding: 20px 14px; } .workspace { grid-template-columns: 1fr; } header, .toolbar { flex-wrap: wrap; } .toolbar label:first-child { flex-basis: 100%; } }
