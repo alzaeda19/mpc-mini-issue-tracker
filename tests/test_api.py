@@ -82,6 +82,16 @@ class IssueApiTests(unittest.TestCase):
         for query in ['status=Bad', 'limit=0', 'limit=101', 'offset=-1']:
             self.assertEqual(self.client.get('/api/issues?' + query).status_code, 422)
 
+    def test_out_of_range_sqlite_integers_are_validation_errors(self):
+        huge = 2**63
+        for method in ['get', 'delete']:
+            self.assertEqual(getattr(self.client, method)(f'/api/issues/{huge}').status_code, 422)
+        self.assertEqual(self.client.patch(f'/api/issues/{huge}', json={'status': 'Closed'}).status_code, 422)
+        self.assertEqual(self.client.get(f'/api/issues?offset={huge}').status_code, 422)
+        self.assertEqual(self.client.post('/api/issues', json={**self.payload, 'assignee_id': huge}).status_code, 422)
+        issue = self.create()
+        self.assertEqual(self.client.patch(f'/api/issues/{issue["id"]}', json={'assignee_id': huge}).status_code, 422)
+
     def test_users_and_restart_persistence(self):
         users = self.client.get('/api/users').json()
         self.assertEqual([user['id'] for user in users], [1, 2, 3])

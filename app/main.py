@@ -9,11 +9,11 @@ from fastapi import FastAPI, HTTPException, Path as ApiPath, Query, Request, Res
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from .database import initialize
-from .models import Issue, IssueCreate, IssuePatch, Status, User
+from .models import Issue, IssueCreate, IssuePatch, SQLITE_INT_MAX, Status, User
 from .repository import InvalidAssignee, NotFound, Repository
 
 logger = logging.getLogger(__name__)
-IssueId = Annotated[int, ApiPath(gt=0)]
+IssueId = Annotated[int, ApiPath(gt=0, le=SQLITE_INT_MAX)]
 STATIC = Path(__file__).parent / 'static'
 
 
@@ -54,7 +54,7 @@ def create_app(database_path=None):
     def list_issues(status: Status | None = None,
                     search: Annotated[str, Query(max_length=200)] = '',
                     limit: Annotated[int, Query(ge=1, le=100)] = 20,
-                    offset: Annotated[int, Query(ge=0)] = 0):
+                    offset: Annotated[int, Query(ge=0, le=SQLITE_INT_MAX)] = 0):
         return repository.list(status, search.strip(), limit, offset)
 
     @app.get('/api/issues/{issue_id}', response_model=Issue)

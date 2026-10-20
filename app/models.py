@@ -3,6 +3,10 @@ from enum import StrEnum
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
+# SQLite INTEGER values are signed 64-bit numbers. Validate before binding SQL.
+SQLITE_INT_MAX = 2**63 - 1
+
+
 class Status(StrEnum):
     OPEN = 'Open'
     IN_PROGRESS = 'In Progress'
@@ -23,7 +27,7 @@ class IssueFields(BaseModel):
     description: str = Field(min_length=1, max_length=10000)
     status: Status
     priority: Priority
-    assignee_id: int = Field(gt=0, strict=True)
+    assignee_id: int = Field(gt=0, le=SQLITE_INT_MAX, strict=True)
 
 
 class IssueCreate(IssueFields):
@@ -36,7 +40,7 @@ class IssuePatch(BaseModel):
     description: str | None = Field(default=None, min_length=1, max_length=10000)
     status: Status | None = None
     priority: Priority | None = None
-    assignee_id: int | None = Field(default=None, gt=0, strict=True)
+    assignee_id: int | None = Field(default=None, gt=0, le=SQLITE_INT_MAX, strict=True)
 
     @field_validator('*', mode='before')
     @classmethod
