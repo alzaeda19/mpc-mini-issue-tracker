@@ -82,6 +82,16 @@ class IssueApiTests(unittest.TestCase):
         for query in ['status=Bad', 'limit=0', 'limit=101', 'offset=-1']:
             self.assertEqual(self.client.get('/api/issues?' + query).status_code, 422)
 
+    def test_invisible_and_nul_text_is_rejected_without_changing_records(self):
+        issue = self.create()
+        url = f'/api/issues/{issue["id"]}'
+        for field in ['title', 'description']:
+            for value in ['\x00hidden', 'prefix\x00suffix', '\u200b', '\ufeff']:
+                with self.subTest(field=field, value=repr(value)):
+                    self.assertEqual(self.client.post('/api/issues', json={**self.payload, field: value}).status_code, 422)
+                    self.assertEqual(self.client.patch(url, json={field: value}).status_code, 422)
+                    self.assertEqual(self.client.get(url).json(), issue)
+
     def test_out_of_range_sqlite_integers_are_validation_errors(self):
         huge = 2**63
         for method in ['get', 'delete']:

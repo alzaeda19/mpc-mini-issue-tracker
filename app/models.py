@@ -21,6 +21,15 @@ class Priority(StrEnum):
     CRITICAL = 'Critical'
 
 
+def validate_text(value: str) -> str:
+    # SQLite length() stops at NUL; reject it before database CHECK constraints.
+    if '\x00' in value:
+        raise ValueError('Text cannot contain NUL characters')
+    if not any(character.isprintable() and not character.isspace() for character in value):
+        raise ValueError('Text must contain a visible character')
+    return value
+
+
 class IssueFields(BaseModel):
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
     title: str = Field(min_length=1, max_length=200)
@@ -28,6 +37,11 @@ class IssueFields(BaseModel):
     status: Status
     priority: Priority
     assignee_id: int = Field(gt=0, le=SQLITE_INT_MAX, strict=True)
+
+    @field_validator('title', 'description')
+    @classmethod
+    def validate_content(cls, value):
+        return validate_text(value)
 
 
 class IssueCreate(IssueFields):
@@ -41,6 +55,12 @@ class IssuePatch(BaseModel):
     status: Status | None = None
     priority: Priority | None = None
     assignee_id: int | None = Field(default=None, gt=0, le=SQLITE_INT_MAX, strict=True)
+
+
+    @field_validator('title', 'description')
+    @classmethod
+    def validate_content(cls, value):
+        return validate_text(value)
 
     @field_validator('*', mode='before')
     @classmethod
